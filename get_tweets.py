@@ -2,6 +2,8 @@ import tweepy
 import json
 import pandas as pd
 import numpy as np
+from collections import namedtuple, Counter
+import csv
 from keys import *
 
 #my api codes are stored in a file called keys that I import above
@@ -10,31 +12,14 @@ auth = tweepy.AppAuthHandler(ckey, csecret)
 
 api = tweepy.API(auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True,)
 searchQuery = '#impostersyndrome OR imposter syndrome'
-max_count = 100000
+max_count = 500
 
+Tweet = namedtuple('Tweet', 'id name text location img_url date')
+def get_tweets():
+    for tw in tweepy.Cursor(api.search, q=searchQuery).items(max_count):
+        yield Tweet(tw.id_str, tw.user.screen_name, tw.text, tw.user.location, tw.user.profile_image_url, tw.created_at)
 
-# I didn't get the cursors working
-#tweets = tweepy.Cursor(api.search, q=searchQuery).items(max_count)
-
-# This one worked
-tweets = api.search(q = searchQuery, count=max_count)
-#
-data = pd.DataFrame(data = [tweet.id for tweet in tweets], columns =['t_id'])
-data['s_name'] = np.array([tweet.user.screen_name for tweet in tweets])
-data['t_text'] = np.array([tweet.text for tweet in tweets])
-data['u_location'] = np.array([tweet.user.location for tweet in tweets])
-data['image_url'] = np.array([tweet.user.profile_image_url for tweet in tweets])
-data['t_date'] = np.array([tweet.created_at for tweet in tweets])
-
-# these did not provide much data
-#data['t_coord'] = np.array([tweet.coordinates for tweet in tweets])
-#data['t_geo'] = np.array([tweet.geo for tweet in tweets])
-#data['t_place'] = np.array([tweet.place for tweet in tweets])
-
-# maybe try with the append option
-data.to_csv("mytweets.csv", encoding='utf-8')
-
-# I use this to test the data output from tweepy
-# for tweet in tweets[:5]:
-#     print(tweet.user.profile_image_url)
-#     print()
+tweets = list(get_tweets())
+with open("mytweets.csv", 'a', encoding='utf-8') as f:
+    writer = csv.writer(f)
+    writer.writerows(tweets)
